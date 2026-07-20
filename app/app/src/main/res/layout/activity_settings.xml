@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF121212">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Settings"
+            android:textColor="#FFFFFFFF"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Server URL -->
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Server URL" android:textColor="#CCFFFFFF" android:textSize="14sp"
+            android:textStyle="bold" android:layout_marginBottom="6dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etServerUrl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="https://your-server.railway.app"
+                android:inputType="textUri"
+                android:textColor="#FFFFFFFF" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Your Railway server URL (no trailing slash)"
+            android:textColor="#AA888888" android:textSize="12sp" android:layout_marginBottom="20dp" />
+
+        <!-- Session ID -->
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Session ID (Room Name)" android:textColor="#CCFFFFFF" android:textSize="14sp"
+            android:textStyle="bold" android:layout_marginBottom="6dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSessionId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="my-session-123"
+                android:inputType="text"
+                android:textColor="#FFFFFFFF" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="20dp">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="All devices with same ID connect to same room"
+                android:textColor="#AA888888" android:textSize="12sp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGenerateId"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Generate" android:textSize="12sp"
+                style="@style/Widget.MaterialComponents.Button.TextButton" />
+        </LinearLayout>
+
+        <!-- Session Secret -->
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Session Secret" android:textColor="#CCFFFFFF" android:textSize="14sp"
+            android:textStyle="bold" android:layout_marginBottom="6dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:endIconMode="password_toggle"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSessionSecret"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Secret password"
+                android:inputType="textPassword"
+                android:textColor="#FFFFFFFF" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Must match SESSION_SECRET on the server and all devices"
+            android:textColor="#AA888888" android:textSize="12sp" android:layout_marginBottom="20dp" />
+
+        <!-- Device Mode -->
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Device Mode" android:textColor="#CCFFFFFF" android:textSize="14sp"
+            android:textStyle="bold" android:layout_marginBottom="12dp" />
+
+        <RadioGroup android:id="@+id/rgMode" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginBottom="8dp">
+
+            <RadioButton android:id="@+id/rbController"
+                android:layout_width="match_parent" android:layout_height="48dp"
+                android:text="Controller (no root needed)" android:textColor="#FFFFFFFF" />
+
+            <RadioButton android:id="@+id/rbTarget"
+                android:layout_width="match_parent" android:layout_height="48dp"
+                android:text="Target (requires root)" android:textColor="#FFFFFFFF" />
+        </RadioGroup>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Controller: your primary device. Target: devices that mirror your touches."
+            android:textColor="#AA888888" android:textSize="12sp" android:layout_marginBottom="20dp" />
+
+        <!-- Auto-start -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical"
+            android:layout_marginBottom="24dp">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="Auto-connect on boot" android:textColor="#CCFFFFFF" android:textSize="14sp" />
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchAutostart"
+                android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Save Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Save Settings"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+</ScrollView>

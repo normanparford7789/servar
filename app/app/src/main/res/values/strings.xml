@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TouchMirror</string>
+    <string name="accessibility_service_label">TouchMirror Controller</string>
+    <string name="accessibility_service_description">Captures touch gestures to mirror them across connected devices via the internet. Enable this to use Controller mode.</string>
+
+    <!-- Settings keys -->
+    <string name="pref_server_url">server_url</string>
+    <string name="pref_session_id">session_id</string>
+    <string name="pref_session_secret">session_secret</string>
+    <string name="pref_device_mode">device_mode</string>
+    <string name="pref_autostart">autostart</string>
+
+    <!-- Modes -->
+    <string name="mode_controller">Controller (no root needed)</string>
+    <string name="mode_target">Target (requires root)</string>
+
+    <!-- UI -->
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="settings">Settings</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_connected">Connected</string>
+    <string name="mirror_on">Mirroring: ON</string>
+    <string name="mirror_off">Mirroring: PAUSED</string>
+    <string name="channel_id">touchmirror_service</string>
+    <string name="channel_name">TouchMirror Service</string>
+    <string name="notification_title">TouchMirror Running</string>
+    <string name="notification_text_controller">Controller active — touch events being mirrored</string>
+    <string name="notification_text_target">Target active — receiving touch events</string>
+</resources>

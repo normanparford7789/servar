@@ -1,0 +1,24 @@
+# Server
+server/node_modules/
+server/.env
+
+# Android
+app/.gradle/
+app/local.properties
+app/app/build/
+app/build/
+*.keystore
+!app/app/debug.keystore
+
+# IDEs
+.idea/
+*.iml
+.DS_Store
+
+# Env files
+.env
+*.env
+!*.env.example
+
+# Logs
+*.log
