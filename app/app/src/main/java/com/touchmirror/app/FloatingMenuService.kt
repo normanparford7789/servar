@@ -24,6 +24,7 @@ import android.view.WindowManager
 import android.widget.ImageView
 import androidx.cardview.widget.CardView
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
 import org.json.JSONObject
 
@@ -76,7 +77,7 @@ class FloatingMenuService : Service() {
         super.onCreate()
         windowManager = getSystemService(WindowManager::class.java)
         getScreenSize()
-        registerReceiver(socketStatusReceiver, IntentFilter(SocketService.BROADCAST_STATUS))
+        ContextCompat.registerReceiver(this, socketStatusReceiver, IntentFilter(SocketService.BROADCAST_STATUS), ContextCompat.RECEIVER_NOT_EXPORTED)
         createNotificationChannel()
     }
 

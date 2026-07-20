@@ -15,6 +15,7 @@ import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
 import org.json.JSONObject
 
@@ -53,8 +54,8 @@ class TouchExecutorService : Service() {
     override fun onCreate() {
         super.onCreate()
         getScreenSize()
-        registerReceiver(touchReceiver, IntentFilter(SocketService.BROADCAST_TOUCH))
-        registerReceiver(mirrorStateReceiver, IntentFilter(SocketService.BROADCAST_MIRROR_STATE))
+        ContextCompat.registerReceiver(this, touchReceiver, IntentFilter(SocketService.BROADCAST_TOUCH), ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(this, mirrorStateReceiver, IntentFilter(SocketService.BROADCAST_MIRROR_STATE), ContextCompat.RECEIVER_NOT_EXPORTED)
 
         // Open persistent root shell
         scope.launch {

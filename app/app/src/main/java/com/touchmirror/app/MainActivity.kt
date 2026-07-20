@@ -210,10 +210,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun registerReceivers() {
-        registerReceiver(statusReceiver, IntentFilter(SocketService.BROADCAST_STATUS))
-        registerReceiver(peerReceiver, IntentFilter(SocketService.BROADCAST_PEER_UPDATE))
-        registerReceiver(logReceiver, IntentFilter(SocketService.BROADCAST_LOG))
-        registerReceiver(mirrorReceiver, IntentFilter(SocketService.BROADCAST_MIRROR_STATE))
+        // Android 13+ (API 33+) requires RECEIVER_NOT_EXPORTED for non-system broadcasts
+        val flag = ContextCompat.RECEIVER_NOT_EXPORTED
+        ContextCompat.registerReceiver(this, statusReceiver, IntentFilter(SocketService.BROADCAST_STATUS), flag)
+        ContextCompat.registerReceiver(this, peerReceiver, IntentFilter(SocketService.BROADCAST_PEER_UPDATE), flag)
+        ContextCompat.registerReceiver(this, logReceiver, IntentFilter(SocketService.BROADCAST_LOG), flag)
+        ContextCompat.registerReceiver(this, mirrorReceiver, IntentFilter(SocketService.BROADCAST_MIRROR_STATE), flag)
     }
 
     private fun unregisterReceivers() {
