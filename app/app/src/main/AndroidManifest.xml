@@ -11,7 +11,7 @@
 
     <!-- Foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Wake lock to keep service alive -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -55,7 +55,7 @@
         <service
             android:name=".FloatingMenuService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="dataSync" />
 
         <!-- Touch Capture Accessibility Service (Controller) -->
         <service
@@ -75,13 +75,13 @@
         <service
             android:name=".TouchExecutorService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="dataSync" />
 
         <!-- Socket Relay Service (shared) -->
         <service
             android:name=".SocketService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="dataSync" />
 
         <!-- Boot receiver -->
         <receiver
