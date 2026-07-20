@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
-import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -35,8 +34,8 @@ import org.json.JSONObject
  * 1. Show a draggable floating button (pause/resume mirroring).
  * 2. Capture ALL touch events via a full-screen transparent overlay.
  * 3. Send captured events to SocketService.
- * 4. Re-inject events locally via TouchCaptureService (Accessibility) so the
- *    underlying app still receives them.
+ * 4. Re-inject the full gesture (DOWN->MOVE->UP) locally via TouchCaptureService
+ *    so the underlying app still receives touches correctly.
  */
 class FloatingMenuService : Service() {
 
@@ -56,6 +55,12 @@ class FloatingMenuService : Service() {
     private var isMirroring = true
     private var screenWidth = 1080
     private var screenHeight = 1920
+
+    // Gesture tracking for proper re-injection (full path DOWN->MOVE->UP as one gesture)
+    private val gesturePoints = mutableListOf<Pair<Float, Float>>()
+    private var gestureDownTime = 0L
+    private var gestureStartX = 0f
+    private var gestureStartY = 0f
 
     // Batch touch events for efficiency
     private val touchBatch = mutableListOf<TouchEvent>()
@@ -77,7 +82,11 @@ class FloatingMenuService : Service() {
         super.onCreate()
         windowManager = getSystemService(WindowManager::class.java)
         getScreenSize()
-        ContextCompat.registerReceiver(this, socketStatusReceiver, IntentFilter(SocketService.BROADCAST_STATUS), ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(
+            this, socketStatusReceiver,
+            IntentFilter(SocketService.BROADCAST_STATUS),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         createNotificationChannel()
     }
 
@@ -175,11 +184,6 @@ class FloatingMenuService : Service() {
     private fun toggleMirror() {
         isMirroring = !isMirroring
         updateFabIcon()
-        // Tell SocketService
-        val intent = Intent(this, SocketService::class.java).apply {
-            action = if (isMirroring) "MIRROR_ON" else "MIRROR_OFF"
-        }
-        // Use broadcast instead
         val b = Intent(SocketService.BROADCAST_MIRROR_STATE).apply {
             putExtra(SocketService.EXTRA_MIRRORING, isMirroring)
         }
@@ -195,7 +199,6 @@ class FloatingMenuService : Service() {
     }
 
     private fun updateFabColor(status: String) {
-        // Visual feedback via tint — runs on main thread via post
         fabView?.post {
             val color = when (status) {
                 "connected" -> 0xFF4CAF50.toInt()
@@ -211,8 +214,26 @@ class FloatingMenuService : Service() {
     private fun showCaptureOverlay() {
         if (overlayView != null) return
 
+        // SAFETY CHECK: If the AccessibilityService is not running, the overlay would
+        // block ALL touches on the phone with no way to re-inject them — making the
+        // device completely unusable. Only create the capturing overlay when we can
+        // safely re-inject touches back to the underlying app.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && TouchCaptureService.instance == null) {
+            val warnIntent = Intent(SocketService.BROADCAST_LOG).apply {
+                putExtra(
+                    SocketService.EXTRA_MESSAGE,
+                    "ERROR: Accessibility Service not enabled! Go to: Settings > Accessibility > TouchMirror Controller > Enable. Then reconnect."
+                )
+            }
+            sendBroadcast(warnIntent)
+            Log.w(TAG, "Accessibility service not running — skipping overlay to prevent input block")
+            return
+        }
+
         val overlay = View(this)
-        overlay.setBackgroundColor(0x00000000) // fully transparent
+        // Use 0x01000000 (1% opacity black = visually invisible) instead of 0x00000000
+        // because fully-transparent views may not receive touch events on some devices/ROMs.
+        overlay.setBackgroundColor(0x01000000)
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -221,23 +242,24 @@ class FloatingMenuService : Service() {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
-            // NOT_TOUCH_MODAL allows touches outside the overlay to pass through
-            // We capture every touch but also re-inject it
+            // FLAG_NOT_FOCUSABLE: window below this overlay keeps focus,
+            //   so dispatchGesture() in AccessibilityService delivers to the app below.
+            // FLAG_LAYOUT_IN_SCREEN: overlay spans the full screen including system bars.
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-            PixelFormat.TRANSPARENT
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = 0; y = 0
-            alpha = 0.01f // nearly invisible but still receives touches
         }
 
         overlay.setOnTouchListener { _, event ->
+            // 1. Capture and send the touch event to remote targets
             if (isMirroring) onOverlayTouch(event)
-            // Always re-inject so the underlying app gets the touch
+            // 2. Re-inject the full gesture locally so the underlying app receives it
             reInjectTouch(event)
-            false // don't consume — let the event continue naturally
+            // Return true: we consume the event, re-injection handles delivery below
+            true
         }
 
         overlayView = overlay
@@ -247,6 +269,7 @@ class FloatingMenuService : Service() {
     private fun removeCaptureOverlay() {
         overlayView?.let { windowManager.removeView(it) }
         overlayView = null
+        gesturePoints.clear()
     }
 
     // ── Touch Capture & Send ──────────────────────────────────────────────────
@@ -279,13 +302,11 @@ class FloatingMenuService : Service() {
         synchronized(touchBatch) {
             touchBatch.add(event)
         }
-        // Debounce: flush batch every 16ms (~60fps)
         batchJob?.cancel()
         batchJob = batchScope.launch {
             delay(16)
             flushBatch()
         }
-        // Immediate flush for down/up events
         if (event.action == "down" || event.action == "up") {
             batchJob?.cancel()
             batchScope.launch { flushBatch() }
@@ -299,26 +320,51 @@ class FloatingMenuService : Service() {
             batch = touchBatch.toList()
             touchBatch.clear()
         }
-        // Send via local broadcast — SocketService picks it up
         val intent = Intent("com.touchmirror.SEND_TOUCH_BATCH").apply {
             putExtra("batch_json", org.json.JSONArray(batch.map { it.toJson() }).toString())
         }
         sendBroadcast(intent)
     }
 
-    // ── Re-injection (so underlying app receives the touch) ───────────────────
+    // ── Re-injection (so underlying app receives the full gesture) ─────────────
+    // Tracks the complete gesture path (DOWN -> MOVE -> UP) and dispatches it as
+    // a single GestureDescription. This is the correct way to use dispatchGesture():
+    // one call with the full path, not a separate call per event.
 
     private fun reInjectTouch(event: MotionEvent) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
         val svc = TouchCaptureService.instance ?: return
-        val action = event.actionMasked
-        // Only re-inject tap/click gestures; move events are frequent and not needed
-        if (action == MotionEvent.ACTION_UP) {
-            val pointer = TouchPointer(0, event.x, event.y) // absolute coords for re-injection
-            try {
-                svc.injectTap(event.x, event.y, 50L)
-            } catch (e: Exception) {
-                Log.w(TAG, "Re-inject failed: ${e.message}")
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                gesturePoints.clear()
+                gestureStartX = event.x
+                gestureStartY = event.y
+                gestureDownTime = event.eventTime
+                gesturePoints.add(Pair(event.x, event.y))
+            }
+            MotionEvent.ACTION_MOVE -> {
+                // Include historical points for smooth swipe paths
+                for (h in 0 until event.historySize) {
+                    gesturePoints.add(Pair(event.getHistoricalX(h), event.getHistoricalY(h)))
+                }
+                gesturePoints.add(Pair(event.x, event.y))
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                gesturePoints.add(Pair(event.x, event.y))
+                val duration = maxOf(event.eventTime - gestureDownTime, 50L)
+                val path = Path().apply {
+                    moveTo(gestureStartX, gestureStartY)
+                    // Add all intermediate points for swipes; for a simple tap
+                    // this is just one lineTo the same point — still works fine.
+                    gesturePoints.drop(1).forEach { (x, y) -> lineTo(x, y) }
+                }
+                try {
+                    svc.injectPath(path, 0L, duration)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Re-inject failed: ${e.message}")
+                }
+                gesturePoints.clear()
             }
         }
     }
@@ -370,7 +416,7 @@ class FloatingMenuService : Service() {
         )
         return NotificationCompat.Builder(this, SocketService.CHANNEL_ID)
             .setContentTitle("TouchMirror Controller")
-            .setContentText("Capturing touch events…")
+            .setContentText("Capturing touch events...")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(pi)
             .addAction(android.R.drawable.ic_media_pause, "Pause/Resume", togglePi)
